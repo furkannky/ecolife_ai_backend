@@ -53,23 +53,29 @@ X_test_scaled = scaler.transform(X_test)
 X_train_cnn = np.expand_dims(X_train_scaled, axis=-1)
 X_test_cnn = np.expand_dims(X_test_scaled, axis=-1)
 
-# 7. 1D-CNN Derin Öğrenme Model Mimarisi
-model = models.Sequential([
-    layers.Input(shape=(X_train_cnn.shape[1], 1)),
-    
-    # 1. Evrişim ve Havuzlama (Pooling) Katmanı
-    layers.Conv1D(filters=32, kernel_size=2, activation='relu'),
-    layers.MaxPooling1D(pool_size=2),
-    
-    # 2. Evrişim Katmanı
-    layers.Conv1D(filters=64, kernel_size=2, activation='relu'),
-    layers.Flatten(),
-    
-    # Tam Bağlantılı (Dense) Katmanlar
-    layers.Dense(64, activation='relu'),
-    layers.Dropout(0.3),  # Aşırı öğrenmeyi (overfitting) engellemek için sinirleri seyrekleştirme
-    layers.Dense(1, activation='sigmoid')  # İkili sınıflandırma (0 veya 1) çıktısı
-])
+# 7. 1D-CNN + Attention Derin Öğrenme Model Mimarisi
+inputs = layers.Input(shape=(X_train_cnn.shape[1], 1))
+
+# 1. Evrişim ve Havuzlama (Pooling) Katmanı
+x = layers.Conv1D(filters=32, kernel_size=2, activation='relu', padding='same')(inputs)
+x = layers.MaxPooling1D(pool_size=2)(x)
+
+# 2. Evrişim Katmanı
+x = layers.Conv1D(filters=64, kernel_size=2, activation='relu', padding='same')(x)
+
+# Attention Mekanizması (Öz-Dikkat / Self-Attention)
+# Keras Attention katmanı x'i hem query hem de value olarak kullanır
+attention_output = layers.Attention()([x, x])
+
+# Düzleştirme (Flatten)
+x = layers.Flatten()(attention_output)
+
+# Tam Bağlantılı (Dense) Katmanlar
+x = layers.Dense(64, activation='relu')(x)
+x = layers.Dropout(0.3)(x)
+outputs = layers.Dense(1, activation='sigmoid')(x)
+
+model = models.Model(inputs=inputs, outputs=outputs)
 
 # Raporunuzda en kritik metrik olarak belirlediğiniz 'Recall' (Duyarlılık) metriği eklenmiştir 
 model.compile(
